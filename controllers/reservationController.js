@@ -7,7 +7,6 @@ const Restaurant = require('../models/Restaurant');
 // @route   POST /api/reservations
 // @access  Private
 const createReservation = async (req, res) => {
-
   try {
 
     const {
@@ -15,26 +14,44 @@ const createReservation = async (req, res) => {
       tableId,
       date,
       time,
+      duration,
       guests,
       specialRequests
     } = req.body;
 
-    if (!restaurantId || !tableId || !date || !time || !guests) {
+    // Required fields validation
+    if (
+      !restaurantId ||
+      !tableId ||
+      !date ||
+      !time ||
+      !guests ||
+      !duration
+    ) {
       return res.status(400).json({
         success: false,
         message: 'All required fields must be provided'
       });
     }
 
-    // booking start
+    // Duration validation
+    if (![30, 40, 50].includes(Number(duration))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Duration must be 30, 40 or 50 minutes'
+      });
+    }
+
+    // Booking start time
     const bookingStart = new Date(`${date}T${time}:00`);
 
-    // booking end (1 hour)
+    // Booking end time based on selected duration
     const bookingEnd = new Date(
-      bookingStart.getTime() + (1 * 60 * 60 * 1000)
+      bookingStart.getTime() +
+      (Number(duration) * 60 * 1000)
     );
 
-    // restaurant check
+    // Restaurant validation
     const restaurant = await Restaurant.findById(restaurantId);
 
     if (!restaurant || !restaurant.isActive) {
@@ -44,7 +61,7 @@ const createReservation = async (req, res) => {
       });
     }
 
-    // table check
+    // Table validation
     const table = await Table.findById(tableId);
 
     if (
@@ -58,27 +75,30 @@ const createReservation = async (req, res) => {
       });
     }
 
-    // seats check
-    if (guests > table.seats) {
+    // Seat validation
+    if (Number(guests) > table.seats) {
       return res.status(400).json({
         success: false,
-        message: `Max ${table.seats} guests allowed`
+        message: `Maximum ${table.seats} guests allowed`
       });
     }
 
-    // existing reservations
+    // Existing reservations
     const reservations = await Reservation.find({
       tableId,
       status: { $ne: 'Cancelled' }
     });
 
-    // overlap check
+    // Time overlap validation
     const isBooked = reservations.some((reservation) => {
 
-      const existingStart = new Date(reservation.bookingDateTime);
+      const existingStart = new Date(
+        reservation.bookingDateTime
+      );
 
       const existingEnd = new Date(
-        existingStart.getTime() + (1 * 60 * 60 * 1000)
+        existingStart.getTime() +
+        ((reservation.duration || 30) * 60 * 1000)
       );
 
       return (
@@ -94,12 +114,13 @@ const createReservation = async (req, res) => {
       });
     }
 
-    // create reservation
+    // Create reservation
     const reservation = await Reservation.create({
       userId: req.user._id,
       restaurantId,
       tableId,
       bookingDateTime: bookingStart,
+      duration,
       guests,
       specialRequests,
       status: 'Pending'
@@ -113,7 +134,7 @@ const createReservation = async (req, res) => {
 
   } catch (error) {
 
-    console.error('❌ FULL ERROR:', error.stack);
+    console.error(' FULL ERROR:', error);
 
     return res.status(500).json({
       success: false,

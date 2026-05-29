@@ -3,65 +3,61 @@ const Restaurant = require('../models/Restaurant');
 // @desc    Get all restaurants
 // @route   GET /api/restaurants
 // @access  Public
+
 const getRestaurants = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
-    
-    // Build query
-    let query = { isActive: true };
-    if (search) {
-      query.name = { $regex: search, $options: 'i' };
-    }
 
-    const restaurants = await Restaurant.find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+    const restaurants = await Restaurant.find({
+      isActive: true
+    })
+    .select('name address details')
+    .sort({ name: 1 });
 
-    const total = await Restaurant.countDocuments(query);
-
-    res.json({
+    return res.json({
       success: true,
       count: restaurants.length,
-      page: parseInt(page),
-      totalPages: Math.ceil(total / limit),
       data: restaurants
     });
+
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message
     });
   }
 };
 
-// @desc    Get single restaurant
-// @route   GET /api/restaurants/:id
+// @desc    Get single restaurant by name
+// @route   GET /api/restaurants/name/:name
 // @access  Public
-const getRestaurant = async (req, res) => {
+
+const getRestaurantID = async (req, res) => {
   try {
-    const restaurant = await Restaurant.findById(req.params.id);
-    
-    if (!restaurant || !restaurant.isActive) {
+
+    const restaurant = await Restaurant.findOne({
+      name: req.params.name,
+      isActive: true
+    });
+
+    if (!restaurant) {
       return res.status(404).json({
         success: false,
         message: 'Restaurant not found'
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
-      data: restaurant
+      data: {
+        id: restaurant._id,
+        name: restaurant.name,
+        address: restaurant.address,
+        details: restaurant.details
+      }
     });
+
   } catch (error) {
-    if (error.name === 'CastError') {
-      return res.status(404).json({
-        success: false,
-        message: 'Restaurant not found'
-      });
-    }
-    
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message
     });
@@ -73,34 +69,41 @@ const getRestaurant = async (req, res) => {
 // @access  Private/Admin
 const createRestaurant = async (req, res) => {
   try {
-    const {
-      name,
-      cuisine,
-      category,
-      image,
-      rating,
-      address,
-      contact
-    } = req.body;
+    const { name, address, details } = req.body;
 
-    const restaurant = await Restaurant.create({
-      name,
-      cuisine,
-      category,
-      image,
-      rating,
-      address,
-      contact
+    if (!name || !address || !details) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, address and details are required'
+      });
+    }
+
+    const existingRestaurant = await Restaurant.findOne({
+      name: name.trim(),
+      isActive: true
     });
 
-    return res.status(201).json({ 
+    if (existingRestaurant) {
+      return res.status(400).json({
+        success: false,
+        message: 'Restaurant already exists'
+      });
+    }
+
+    const restaurant = await Restaurant.create({
+      name: name.trim(),
+      address,
+      details
+    });
+
+    return res.status(201).json({
       success: true,
       message: 'Restaurant created successfully',
       data: restaurant
     });
 
   } catch (error) {
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
       message: error.message
     });
@@ -112,10 +115,51 @@ const createRestaurant = async (req, res) => {
 // @access  Private/Admin
 const updateRestaurant = async (req, res) => {
   try {
+
+    const allowedFields = [
+      'name',
+      'address',
+      'details'
+    ];
+
+    const updates = Object.keys(req.body);
+
+    const isValid = updates.every(field =>
+      allowedFields.includes(field)
+    );
+
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid fields in request'
+      });
+    }
+
+    if (req.body.name) {
+      const existingRestaurant = await Restaurant.findOne({
+        name: req.body.name,
+        _id: { $ne: req.params.id },
+        isActive: true
+      });
+
+      if (existingRestaurant) {
+        return res.status(400).json({
+          success: false,
+          message: 'Restaurant name already exists'
+        });
+      }
+    }
+
     const restaurant = await Restaurant.findByIdAndUpdate(
       req.params.id,
-      req.body,
-      { new: true, runValidators: true }
+      {
+        ...req.body,
+        updatedAt: Date.now()
+      },
+      {
+        new: true,
+        runValidators: true
+      }
     );
 
     if (!restaurant) {
@@ -125,20 +169,14 @@ const updateRestaurant = async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Restaurant updated successfully',
       data: restaurant
     });
+
   } catch (error) {
-    if (error.name === 'CastError') {
-      return res.status(404).json({
-        success: false,
-        message: 'Restaurant not found'
-      });
-    }
-    
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message
     });
@@ -150,7 +188,17 @@ const updateRestaurant = async (req, res) => {
 // @access  Private/Admin
 const deleteRestaurant = async (req, res) => {
   try {
-    const restaurant = await Restaurant.findByIdAndDelete(req.params.id);
+
+    const restaurant = await Restaurant.findByIdAndUpdate(
+      req.params.id,
+      {
+        isActive: false,
+        updatedAt: Date.now()
+      },
+      {
+        new: true
+      }
+    );
 
     if (!restaurant) {
       return res.status(404).json({
@@ -159,19 +207,13 @@ const deleteRestaurant = async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Restaurant deleted successfully'
     });
+
   } catch (error) {
-    if (error.name === 'CastError') {
-      return res.status(404).json({
-        success: false,
-        message: 'Restaurant not found'
-      });
-    }
-    
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message
     });
@@ -180,7 +222,7 @@ const deleteRestaurant = async (req, res) => {
 
 module.exports = {
   getRestaurants,
-  getRestaurant,
+  getRestaurantID,
   createRestaurant,
   updateRestaurant,
   deleteRestaurant
