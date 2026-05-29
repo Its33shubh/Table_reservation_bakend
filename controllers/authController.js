@@ -14,28 +14,90 @@ const generateToken = (userId) => {
 // @access  Public
 const register = async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body;
+    const {
+      name,
+      email,
+      password,
+      phone,
+      role,
+      restaurantId
+    } = req.body;
 
+    // Required fields validation
+    if (!name || !email || !password || !phone || !role) {
+      return res.status(400).json({
+        error: true,
+        success: false,
+        message: 'All fields are required'
+      });
+    }
+
+    // Email validation
+    const emailRgx =
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+    if (!emailRgx.test(email)) {
+      return res.status(400).json({
+        error: true,
+        success: false,
+        message: 'Please enter a valid email address'
+      });
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      return res.status(400).json({
+        error: true,
+        success: false,
+        message: 'Password must be at least 6 characters'
+      });
+    }
+
+    // Role validation
+    if (!['customer', 'admin'].includes(role)) {
+      return res.status(400).json({
+        error: true,
+        success: false,
+        message: 'Role must be customer or admin'
+      });
+    }
+
+    // Admin restaurant validation
+    if (role === 'admin' && !restaurantId) {
+      return res.status(400).json({
+        error: true,
+        success: false,
+        message: 'Restaurant is required for admin'
+      });
+    }
+
+    // Check existing user
     const existingUser = await User.findOne({ email });
+
     if (existingUser) {
       return res.status(400).json({
+        error: true,
         success: false,
         message: 'User already exists with this email'
       });
     }
 
+    // Create user
     const user = new User({
       name,
       email,
       password,
-      phone
+      phone,
+      role,
+      restaurantId: role === 'admin' ? restaurantId : null
     });
 
     await user.save();
 
     const token = generateToken(user._id);
 
-    res.status(201).json({
+    return res.status(201).json({
+      error: false,
       success: true,
       message: 'User registered successfully',
       token,
@@ -44,14 +106,16 @@ const register = async (req, res) => {
         name: user.name,
         email: user.email,
         phone: user.phone,
-        role: user.role
+        role: user.role,
+        restaurantId: user.restaurantId
       }
     });
 
   } catch (error) {
-    console.error("🔥 REGISTER ERROR:", error); // ADD THIS
-  
+    console.error(' REGISTER ERROR:', error);
+
     return res.status(500).json({
+      error: true,
       success: false,
       message: error.message
     });
@@ -65,8 +129,8 @@ const login = async (req, res) => {
   try {
     const { email, password } = matchedData(req);
 
-    // Check if user exists and password is correct
     const user = await User.findOne({ email }).select('+password');
+
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({
         success: false,
@@ -74,10 +138,10 @@ const login = async (req, res) => {
       });
     }
 
-    // Generate token
     const token = generateToken(user._id);
 
-    res.json({
+    return res.json({
+      error:false,
       success: true,
       message: 'Login successful',
       token,
@@ -86,11 +150,14 @@ const login = async (req, res) => {
         name: user.name,
         email: user.email,
         phone: user.phone,
-        role: user.role
+        role: user.role,
+        restaurantId: user.restaurantId
       }
     });
+
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
+      error:true,
       success: false,
       message: error.message
     });
@@ -102,18 +169,20 @@ const login = async (req, res) => {
 // @access  Private
 const getProfile = async (req, res) => {
   try {
-    res.json({
+    return res.json({
       success: true,
       user: {
         id: req.user._id,
         name: req.user.name,
         email: req.user.email,
         phone: req.user.phone,
-        role: req.user.role
+        role: req.user.role,
+        restaurantId: req.user.restaurantId
       }
     });
+
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message
     });
@@ -125,7 +194,9 @@ const getProfile = async (req, res) => {
 // @access  Private
 const updateProfile = async (req, res) => {
   try {
-    //  BLOCK ROLE UPDATE
+    const { name, email, phone, password } = req.body;
+
+    // Block role update
     if (req.body.role) {
       return res.status(403).json({
         success: false,
@@ -133,11 +204,18 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    const { name, email, phone } = matchedData(req);
+    // Block restaurant change
+    if (req.body.restaurantId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not allowed to update restaurant'
+      });
+    }
 
     // Check duplicate email
     if (email && email !== req.user.email) {
       const existingUser = await User.findOne({ email });
+
       if (existingUser) {
         return res.status(400).json({
           success: false,
@@ -146,16 +224,47 @@ const updateProfile = async (req, res) => {
       }
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
-      { name, email, phone, updatedAt: Date.now() },
-      { new: true, runValidators: true }
-    ).select('-password');
+    const user = await User.findById(req.user._id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update fields
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (phone) user.phone = phone;
+
+    // Update password if provided
+    if (password && password.trim() !== '') {
+      if (password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must be at least 6 characters'
+        });
+      }
+
+      user.password = password;
+    }
+
+    user.updatedAt = Date.now();
+
+    await user.save();
 
     return res.json({
       success: true,
       message: 'Profile updated successfully',
-      user: updatedUser
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        restaurantId: user.restaurantId
+      }
     });
 
   } catch (error) {
