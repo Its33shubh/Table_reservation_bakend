@@ -10,7 +10,7 @@ const getRestaurants = async (req, res) => {
     const restaurants = await Restaurant.find({
       isActive: true
     })
-    .select('name address details')
+    .select('_id name address details')
     .sort({ name: 1 });
 
     return res.json({

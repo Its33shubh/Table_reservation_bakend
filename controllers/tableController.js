@@ -46,6 +46,33 @@ const getTablesByRestaurant = async (req, res) => {
 };
 
 
+// @desc    Get all tables
+// @route   GET /api/tables
+// @access  Private/Admin
+
+const getTables = async (req, res) => {
+  try {
+
+    const tables = await Table.find({
+      isActive: true
+    })
+    .populate('restaurantId', 'name')
+    .sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      count: tables.length,
+      data: tables
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 
 // @desc    Get single table
 // @route   GET /api/tables/:id
@@ -264,6 +291,7 @@ const deleteTable = async (req, res) => {
 module.exports = {
   getTablesByRestaurant,
   getTable,
+  getTables,
   createTable,
   updateTable,
   deleteTable

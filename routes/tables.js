@@ -6,7 +6,8 @@ const {
   getTable, 
   createTable, 
   updateTable, 
-  deleteTable 
+  deleteTable ,
+  getTables
 } = require('../controllers/tableController');
 const { auth, adminAuth } = require('../middleware/auth');
 const handleValidationErrors  = require('../middleware/validation');
@@ -90,5 +91,8 @@ router.put(
 // @route   DELETE /api/tables/:id
 // @access  Private/Admin
 router.delete('/:id', adminAuth, deleteTable);
+
+
+router.get('/', adminAuth, getTables);
 
 module.exports = router;
