@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const restaurantSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -44,6 +46,8 @@ const restaurantSchema = new mongoose.Schema({
   }
 });
 
+
+module.exports = mongoose.model('Restaurant', restaurantSchema);
 
 // openingHours: {
 //   monday: { open: String, close: String },

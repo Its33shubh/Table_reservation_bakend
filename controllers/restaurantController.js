@@ -31,7 +31,7 @@ const getRestaurants = async (req, res) => {
 // @route   GET /api/restaurants/name/:name
 // @access  Public
 
-const getRestaurantID = async (req, res) => {
+const getRestaurant = async (req, res) => {
   try {
 
     const restaurant = await Restaurant.findOne({
@@ -222,7 +222,7 @@ const deleteRestaurant = async (req, res) => {
 
 module.exports = {
   getRestaurants,
-  getRestaurantID,
+  getRestaurant,
   createRestaurant,
   updateRestaurant,
   deleteRestaurant

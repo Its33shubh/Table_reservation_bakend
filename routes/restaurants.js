@@ -19,7 +19,7 @@ router.get('/', getRestaurants);
 // @desc    Get single restaurant
 // @route   GET /api/restaurants/:id
 // @access  Public
-router.get('/:id', getRestaurant);
+router.get('/:name', getRestaurant);
 
 // @desc    Create restaurant
 // @route   POST /api/restaurants

@@ -119,6 +119,10 @@ const createReservation = async (req, res) => {
       userId: req.user._id,
       restaurantId,
       tableId,
+    
+      customerName: req.user.name,
+      customerPhone: req.user.phone,
+    
       bookingDateTime: bookingStart,
       duration,
       guests,
@@ -380,50 +384,95 @@ const getRestaurantReservations = async (req, res) => {
 // @desc    Check table availability
 // @route   GET /api/reservations/check-availability
 // @access  Public
-const checkAvailability = async (req, res) => {
+const availableTables = async (req, res) => {
   try {
 
-    const { restaurantId, tableId, date, time } = req.query;
+    const {
+      restaurantId,
+      guests,
+      date,
+      time,
+      duration
+    } = req.query;
 
-    if (!restaurantId || !tableId || !date || !time) {
+    if (
+      !restaurantId ||
+      !guests ||
+      !date ||
+      !time ||
+      !duration
+    ) {
       return res.status(400).json({
         success: false,
         message: 'Missing required fields'
       });
     }
 
-    // booking start time
+    if (![30, 40, 50].includes(Number(duration))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Duration must be 30, 40 or 50 minutes'
+      });
+    }
+
     const bookingStart = new Date(`${date}T${time}:00`);
 
-    // booking end time (1 hour later)
     const bookingEnd = new Date(
-      bookingStart.getTime() + (1 * 60 * 60 * 1000)
+      bookingStart.getTime() +
+      (Number(duration) * 60 * 1000)
     );
 
-    // get reservations
-    const reservations = await Reservation.find({
-      tableId,
-      status: { $ne: 'Cancelled' }
+    // All active tables with enough seats
+    const tables = await Table.find({
+      restaurantId,
+      isActive: true,
+      seats: { $gte: Number(guests) }
     });
 
-    // check overlap
-    const isBooked = reservations.some((reservation) => {
+    const availableTables = [];
 
-      const existingStart = new Date(reservation.bookingDateTime);
+    for (const table of tables) {
 
-      const existingEnd = new Date(
-        existingStart.getTime() + (1 * 60 * 60 * 1000)
-      );
+      const reservations = await Reservation.find({
+        tableId: table._id,
+        status: {
+          $in: ['Pending', 'Confirmed']
+        }
+      });
 
-      return (
-        bookingStart < existingEnd &&
-        bookingEnd > existingStart
-      );
-    });
+      const isBooked = reservations.some((reservation) => {
 
-    return res.json({
+        const existingStart = new Date(
+          reservation.bookingDateTime
+        );
+
+        const existingEnd = new Date(
+          existingStart.getTime() +
+          ((reservation.duration || 30) * 60 * 1000)
+        );
+
+        return (
+          bookingStart < existingEnd &&
+          bookingEnd > existingStart
+        );
+      });
+
+      if (!isBooked) {
+        availableTables.push({
+          _id: table._id,
+          tableName: table.tableName,
+          seats: table.seats,
+          section: table.section,
+          type: table.type,
+          status: table.status
+        });
+      }
+    }
+
+    return res.status(200).json({
       success: true,
-      isAvailable: !isBooked
+      count: availableTables.length,
+      data: availableTables
     });
 
   } catch (error) {
@@ -435,7 +484,6 @@ const checkAvailability = async (req, res) => {
   }
 };
 
-
 module.exports = {
   createReservation,
   getUserReservations,
@@ -443,5 +491,5 @@ module.exports = {
   updateReservationStatus,
   cancelReservation,
   getRestaurantReservations,
-  checkAvailability
+  availableTables
 };

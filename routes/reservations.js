@@ -8,15 +8,15 @@ const {
   updateReservationStatus,
   cancelReservation,
   getRestaurantReservations,
-  checkAvailability
+  availableTables
 } = require('../controllers/reservationController');
 const { auth, adminAuth } = require('../middleware/auth');
 const handleValidationErrors = require('../middleware/validation');
 
 // @desc    Check table availability
-// @route   GET /api/reservations/check-availability
+// @route   GET /api/reservations/available-tables
 // @access  Public
-router.get('/check-availability', checkAvailability);
+router.get('/available-tables', availableTables);
 
 // @desc    Get user's reservations
 // @route   GET /api/reservations
@@ -35,14 +35,26 @@ router.post(
   '/',
   auth,
 
-  // ✅ ALL VALIDATORS IN ONE ARRAY
   [
     body('restaurantId').isMongoId(),
+
     body('tableId').isMongoId(),
+
     body('date').isISO8601(),
+
     body('time').notEmpty(),
-    body('guests').isInt({ min: 1, max: 20 }),
-    body('specialRequests').optional().trim().isLength({ max: 500 })
+
+    body('duration')
+      .isIn([30, 40, 50])
+      .withMessage('Duration must be 30, 40 or 50 minutes'),
+
+    body('guests')
+      .isInt({ min: 1, max: 20 }),
+
+    body('specialRequests')
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
   ],
 
   handleValidationErrors,
