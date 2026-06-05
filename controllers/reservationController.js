@@ -320,7 +320,7 @@ const cancelReservation = async (req, res) => {
   }
 };
 
-
+//admin@gmail.com admin@333
 // @desc    Get reservations for a restaurant (Admin only)
 // @route   GET /api/restaurants/:restaurantId
 // @access  Private/Admin

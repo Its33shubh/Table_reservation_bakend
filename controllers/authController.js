@@ -127,37 +127,50 @@ const register = async (req, res) => {
 // @access  Public
 const login = async (req, res) => {
   try {
-    const { email, password } = matchedData(req);
+    const { name, password } = matchedData(req);
 
-    const user = await User.findOne({ email }).select('+password');
+    // Find all users with the same name
+    const users = await User.find({ name }).select("+password");
 
-    if (!user || !(await user.comparePassword(password))) {
+    let loggedInUser = null;
+
+    // Check password against each user
+    for (const user of users) {
+      const isMatch = await user.comparePassword(password);
+
+      if (isMatch) {
+        loggedInUser = user;
+        break;
+      }
+    }
+
+    if (!loggedInUser) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials"
       });
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(loggedInUser._id);
 
     return res.json({
-      error:false,
+      error: false,
       success: true,
-      message: 'Login successful',
+      message: "Login successful",
       token,
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        restaurantId: user.restaurantId
+        id: loggedInUser._id,
+        name: loggedInUser.name,
+        email: loggedInUser.email,
+        phone: loggedInUser.phone,
+        role: loggedInUser.role,
+        restaurantId: loggedInUser.restaurantId
       }
     });
 
   } catch (error) {
     return res.status(500).json({
-      error:true,
+      error: true,
       success: false,
       message: error.message
     });
