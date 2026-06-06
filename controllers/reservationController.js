@@ -275,6 +275,7 @@ const updateReservationStatus = async (req, res) => {
 // @access  Private
 const cancelReservation = async (req, res) => {
   try {
+
     const reservation = await Reservation.findById(req.params.id);
 
     if (!reservation) {
@@ -284,20 +285,34 @@ const cancelReservation = async (req, res) => {
       });
     }
 
-    if (
-      reservation.userId.toString() !== req.user._id.toString() &&
-      req.user.role !== 'admin'
-    ) {
+    // Customer can cancel own reservation
+    const isOwner =
+      reservation.userId.toString() === req.user._id.toString();
+
+    // Admin can cancel any reservation
+    const isAdmin =
+      req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
       });
     }
 
+    // Prevent cancelling completed reservation
     if (reservation.status === 'Completed') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot cancel completed booking'
+        message: 'Cannot cancel completed reservation'
+      });
+    }
+
+    // Already cancelled
+    if (reservation.status === 'Cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Reservation already cancelled'
       });
     }
 
@@ -306,17 +321,19 @@ const cancelReservation = async (req, res) => {
 
     await reservation.save();
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      message: 'Reservation cancelled',
+      message: 'Reservation cancelled successfully',
       data: reservation
     });
 
   } catch (error) {
+
     return res.status(500).json({
       success: false,
       message: error.message
     });
+
   }
 };
 
