@@ -127,7 +127,9 @@ const register = async (req, res) => {
 // @access  Public
 const login = async (req, res) => {
   try {
-    const { name, password } = matchedData(req);
+    // console.log(req.body);
+    // console.log(matchedData(req));
+    const { name, password } = req.body;
 
     // Find all users with the same name
     const users = await User.find({ name }).select("+password");
