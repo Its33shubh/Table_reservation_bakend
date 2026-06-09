@@ -285,22 +285,27 @@ const cancelReservation = async (req, res) => {
       });
     }
 
-    // Customer can cancel own reservation
-    const isOwner =
-      reservation.userId.toString() === req.user._id.toString();
+    // Admin can permanently delete
+    if (req.user.role === 'admin') {
 
-    // Admin can cancel any reservation
-    const isAdmin =
-      req.user.role === 'admin';
+      await Reservation.findByIdAndDelete(req.params.id);
 
-    if (!isOwner && !isAdmin) {
+      return res.status(200).json({
+        success: true,
+        message: 'Reservation deleted successfully'
+      });
+    }
+
+    // Customer can cancel only own reservation
+    if (
+      reservation.userId.toString() !== req.user._id.toString()
+    ) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
       });
     }
 
-    // Prevent cancelling completed reservation
     if (reservation.status === 'Completed') {
       return res.status(400).json({
         success: false,
@@ -308,7 +313,6 @@ const cancelReservation = async (req, res) => {
       });
     }
 
-    // Already cancelled
     if (reservation.status === 'Cancelled') {
       return res.status(400).json({
         success: false,
