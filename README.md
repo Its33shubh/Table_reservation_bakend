@@ -1,165 +1,85 @@
-# Hotel Table Booking System - Backend
+<div align="center">
 
-This is the backend for the Hotel Table Booking System built with Node.js, Express.js, and MongoDB.
+# 🍽️ ReserveX Backend
+### A Robust Table Reservation System API
 
-## Features
+[![Node.js](https://img.shields.io/badge/Node.js-Always-green.svg)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Database-brightgreen.svg)](https://www.mongodb.com/)
+[![Express.js](https://img.shields.io/badge/Express-Framework-blue.svg)](https://expressjs.com/)
 
-- User authentication and authorization
-- Restaurant management
-- Table management
-- Reservation system
-- Availability checking
-- Admin controls
-- Secure API endpoints
+---
 
-## Installation
+*ReserveX is a comprehensive backend solution designed for seamless restaurant table management and customer bookings. Built for performance and scalability.*
 
-1. Clone the repository
-2. Navigate to the backend directory
-3. Install dependencies:
+</div>
 
-```bash
-npm install
-```
+## 📑 Table of Contents
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [API Documentation](#-api-documentation)
+- [Getting Started](#-getting-started)
+- [Contact](#-contact)
 
-4. Create a `.env` file in the root directory with the following variables:
+---
 
-```env
-NODE_ENV=development
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/hotel_table_booking
-JWT_SECRET=your_jwt_secret_key_here_make_it_long_and_random
-FRONTEND_URL=http://localhost:3000
-```
+## 🚀 Features
+- **User Authentication**: Secure registration and login for Customers and Admins.
+- **Restaurant Management**: Advanced CRUD operations for restaurant profiles.
+- **Smart Table Management**: Manage availability, seating capacity, and status.
+- **Reservation Logic**: Real-time availability checks and booking management.
+- **Role-Based Access**: Specialized endpoints for Admins and Customers.
 
-5. Start the development server:
+---
 
-```bash
-npm run dev
-```
+## 🛠️ Tech Stack
+*   **Runtime**: Node.js
+*   **Framework**: Express.js
+*   **Database**: MongoDB
+*   **Auth**: JWT (JSON Web Tokens)
 
-## API Endpoints
+---
 
-### Authentication
+## 📖 API Documentation
 
-- `POST /api/auth/register` - Register a new user
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/profile` - Get user profile (requires authentication)
-- `PUT /api/auth/profile` - Update user profile (requires authentication)
+### 🔐 Authentication
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | Register new user |
+| `POST` | `/api/auth/login` | Secure login |
+| `GET` | `/api/auth/profile` | Get user profile |
+| `PUT` | `/api/auth/profile` | Update user profile |
 
-### Restaurants
+### 🏢 Restaurant Management (Admin Only)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/restaurants` | View all restaurants |
+| `POST` | `/api/restaurants` | Create new restaurant |
+| `PUT` | `/api/restaurants/:id` | Update restaurant details |
+| `DELETE` | `/api/restaurants/:id` | Soft delete restaurant |
 
-- `GET /api/restaurants` - Get all restaurants
-- `GET /api/restaurants/:id` - Get a specific restaurant
-- `POST /api/restaurants` - Create a new restaurant (admin only)
-- `PUT /api/restaurants/:id` - Update a restaurant (admin only)
-- `DELETE /api/restaurants/:id` - Delete a restaurant (admin only)
+### 🪑 Table Management
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/tables/restaurant/:id` | View restaurant tables |
+| `POST` | `/api/tables` | Create new table (Admin) |
+| `PUT` | `/api/tables/:id` | Update table status/info (Admin) |
 
-### Tables
+### 📅 Reservation System
+| Method | Endpoint | Description |
+| :--- | :--- | :1 |
+| `POST` | `/api/reservations` | Create new reservation |
+| `GET` | `/api/reservations` | Get user bookings |
+| `GET` | `/api/reservations/available-tables` | Check availability |
 
-- `GET /api/restaurants/:restaurantId/tables` - Get tables for a restaurant
-- `GET /api/tables/:id` - Get a specific table
-- `POST /api/tables` - Create a new table (admin only)
-- `PUT /api/tables/:id` - Update a table (admin only)
-- `DELETE /api/tables/:id` - Delete a table (admin only)
+---
 
-### Reservations
+## ⚡ Getting Started
+1. Clone the repository: `git clone https://github.com/Its33shubh/ReserveX-Table_reservation_bakend`
+2. Install dependencies: `npm install`
+3. Configure your `.env` file.
+4. Start the server: `npm start`
 
-- `POST /api/reservations` - Create a new reservation (requires authentication)
-- `GET /api/reservations` - Get user's reservations (requires authentication)
-- `GET /api/reservations/:id` - Get a specific reservation (requires authentication)
-- `PUT /api/reservations/:id` - Update reservation status (admin only)
-- `DELETE /api/reservations/:id` - Cancel a reservation (requires authentication)
-- `GET /api/restaurants/:restaurantId/reservations` - Get reservations for a restaurant (admin only)
-- `GET /api/reservations/check-availability` - Check table availability
-
-## Database Models
-
-### User
-- name: String (required)
-- email: String (required, unique)
-- password: String (required, hashed)
-- phone: String
-- role: String (enum: 'user', 'admin', default: 'user')
-
-### Restaurant
-- name: String (required)
-- cuisine: String
-- image: String
-- rating: Number (0-5)
-- address: String
-- contact: String
-- openingHours: Object
-- isActive: Boolean (default: true)
-
-### Table
-- restaurantId: ObjectId (ref: 'Restaurant', required)
-- tableName: String (required)
-- section: String
-- seats: Number (required, min: 1)
-- status: String (enum: 'Available', 'Booked', 'Maintenance', 'Reserved', default: 'Available')
-- features: Array of Strings
-- pricePerHour: Number (default: 0)
-- isActive: Boolean (default: true)
-
-### Reservation
-- userId: ObjectId (ref: 'User', required)
-- restaurantId: ObjectId (ref: 'Restaurant', required)
-- restaurantName: String (required)
-- tableName: String (required)
-- tableId: ObjectId (ref: 'Table', required)
-- date: Date (required)
-- time: String (required)
-- guests: Number (required, min: 1)
-- specialRequests: String
-- status: String (enum: 'Pending', 'Confirmed', 'Cancelled', 'Completed', default: 'Pending')
-- bookingReference: String (unique, required)
-- totalAmount: Number (default: 0)
-- paymentStatus: String (enum: 'Pending', 'Paid', 'Failed', 'Refunded', default: 'Pending')
-
-## Roles
-
-- **User**: Can view restaurants, tables, make reservations, view their own reservations
-- **Admin**: Has all user permissions plus can manage restaurants, tables, and update reservation statuses
-
-## Error Handling
-
-All API endpoints return standardized error responses:
-
-```json
-{
-  "success": false,
-  "message": "Error message",
-  "errors": [] // Validation errors (optional)
-}
-```
-
-## Success Responses
-
-Success responses follow this format:
-
-```json
-{
-  "success": true,
-  "message": "Success message", // Optional
-  "data": {}, // Response data (optional)
-  "count": 0, // Count of items (optional)
-  "page": 1, // Page number (optional)
-  "totalPages": 1 // Total pages (optional)
-}
-```
-
-## Running in Production
-
-To run the application in production mode:
-
-```bash
-npm start
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+---
+<div align="center">
+Built by <b>Shubham</b> | ReserveX &copy; 2026
+</div>
