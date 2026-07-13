@@ -3,10 +3,12 @@ const jwt = require('jsonwebtoken');
 const { matchedData } = require('express-validator');
 
 // Generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: '7d'
-  });
+const generateToken = (userId, role) => {
+  const options = {};
+  if (role !== 'admin') {
+    options.expiresIn = '7d';
+  }
+  return jwt.sign({ userId }, process.env.JWT_SECRET, options);
 };
 
 // @desc    Register user
@@ -94,7 +96,7 @@ const register = async (req, res) => {
 
     await user.save();
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.role);
 
     return res.status(201).json({
       error: false,
@@ -153,7 +155,7 @@ const login = async (req, res) => {
       });
     }
 
-    const token = generateToken(loggedInUser._id);
+    const token = generateToken(loggedInUser._id, loggedInUser.role);
 
     return res.json({
       error: false,
